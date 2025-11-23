@@ -35,6 +35,11 @@ export function ResultSummary({ expectedAmount, difference, recommendedMonthly }
             bottomProps={{ fontWeight: 'bold', color: colors.blue600 }}
           />
         }
+        aria-label={
+          difference >= 0
+            ? `목표 금액보다 ${formatCurrency(Math.abs(Math.round(difference)))} 많습니다`
+            : `목표 금액보다 ${formatCurrency(Math.abs(Math.round(difference)))} 부족합니다`
+        }
       />
       <ListRow
         contents={

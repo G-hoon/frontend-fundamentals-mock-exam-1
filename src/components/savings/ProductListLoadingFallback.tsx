@@ -24,6 +24,9 @@ export function ProductListLoadingFallback() {
         alignItems="center"
         justifyContent="center"
         style={{ width: '100%', height: '200px', padding: '20px 0px' }}
+        role="status"
+        aria-live="polite"
+        aria-label="상품 목록을 불러오는 중입니다"
       >
         <div
           style={{
@@ -34,6 +37,7 @@ export function ProductListLoadingFallback() {
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }}
+          aria-hidden="true"
         />
         <Spacing size={16} />
         <Text>상품 목록을 불러오는 중...</Text>

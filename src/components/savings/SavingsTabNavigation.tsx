@@ -16,11 +16,11 @@ export function SavingsTabNavigation({ currentTab, onTabChange }: SavingsTabNavi
       <Border height={16} />
       <Spacing size={8} />
 
-      <Tab onChange={value => onTabChange(value as TabType)}>
-        <Tab.Item value="products" selected={currentTab === 'products'}>
+      <Tab onChange={value => onTabChange(value as TabType)} aria-label="적금 계산기 탭">
+        <Tab.Item value="products" selected={currentTab === 'products'} aria-label="적금 상품 탭">
           적금 상품
         </Tab.Item>
-        <Tab.Item value="results" selected={currentTab === 'results'}>
+        <Tab.Item value="results" selected={currentTab === 'results'} aria-label="계산 결과 탭">
           계산 결과
         </Tab.Item>
       </Tab>

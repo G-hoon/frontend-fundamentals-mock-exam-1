@@ -23,6 +23,8 @@ export function ProductListErrorFallback({ error, reset }: ProductListErrorFallb
       justifyContent="center"
       gap={16}
       style={{ height: '200px', maxWidth: '400px', margin: '0 auto', padding: '20px 10px' }}
+      role="alert"
+      aria-live="assertive"
     >
       <Text fontSize={18} fontWeight="bold" color={colors.grey700}>
         상품 목록을 불러오는데 실패했습니다.
