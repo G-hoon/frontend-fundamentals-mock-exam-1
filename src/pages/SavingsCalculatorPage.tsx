@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import {
   Assets,
   Border,
   colors,
-  ListHeader,
+  http,
   ListRow,
   NavigationBar,
   SelectBottomSheet,
@@ -10,19 +11,95 @@ import {
   Tab,
   TextField,
 } from 'tosslib';
+import type { SavingsProduct, TabType } from '@/types/savings';
+import { formatNumber, parseNumber, filterProducts } from '@/utils';
 
 export function SavingsCalculatorPage() {
+  const [targetAmount, setTargetAmount] = useState('');
+  const [monthlyAmount, setMonthlyAmount] = useState('');
+  const [savingsPeriod, setSavingsPeriod] = useState<number>(12);
+  const [products, setProducts] = useState<SavingsProduct[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<TabType>('products');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // API 연동 - 적금 상품 목록 불러오기
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await http.get<SavingsProduct[]>('/api/savings-products');
+        setProducts(response);
+      } catch (e) {
+        setError('상품 목록을 불러오는데 실패했습니다.');
+        console.error('Failed to fetch products:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // 입력값에 따라 필터링된 상품 목록
+  const filteredProducts =
+    parseNumber(monthlyAmount) > 0 ? filterProducts(products, parseNumber(monthlyAmount), savingsPeriod) : products;
+
+  // 상품 선택 핸들러
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId === selectedProductId ? null : productId);
+  };
+
+  if (isLoading) {
+    return (
+      <>
+        <NavigationBar title="적금 계산기" />
+        <Spacing size={16} />
+        <ListRow contents={<ListRow.Texts type="1RowTypeA" top="로딩 중..." />} />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <NavigationBar title="적금 계산기" />
+        <Spacing size={16} />
+        <ListRow contents={<ListRow.Texts type="1RowTypeA" top={error} />} />
+      </>
+    );
+  }
+
   return (
     <>
       <NavigationBar title="적금 계산기" />
 
       <Spacing size={16} />
 
-      <TextField label="목표 금액" placeholder="목표 금액을 입력하세요" suffix="원" />
+      <TextField
+        label="목표 금액"
+        placeholder="목표 금액을 입력하세요"
+        suffix="원"
+        value={targetAmount}
+        onChange={e => setTargetAmount(e.target.value)}
+      />
       <Spacing size={16} />
-      <TextField label="월 납입액" placeholder="희망 월 납입액을 입력하세요" suffix="원" />
+      <TextField
+        label="월 납입액"
+        placeholder="희망 월 납입액을 입력하세요"
+        suffix="원"
+        value={monthlyAmount}
+        onChange={e => setMonthlyAmount(e.target.value)}
+      />
       <Spacing size={16} />
-      <SelectBottomSheet label="저축 기간" title="저축 기간을 선택해주세요" value={12} onChange={() => {}}>
+      <SelectBottomSheet
+        label="저축 기간"
+        title="저축 기간을 선택해주세요"
+        value={savingsPeriod}
+        onChange={value => setSavingsPeriod(value as number)}
+      >
         <SelectBottomSheet.Option value={6}>6개월</SelectBottomSheet.Option>
         <SelectBottomSheet.Option value={12}>12개월</SelectBottomSheet.Option>
         <SelectBottomSheet.Option value={24}>24개월</SelectBottomSheet.Option>
@@ -32,44 +109,34 @@ export function SavingsCalculatorPage() {
       <Border height={16} />
       <Spacing size={8} />
 
-      <Tab onChange={() => {}}>
-        <Tab.Item value="products" selected={true}>
+      <Tab onChange={value => setCurrentTab(value as TabType)}>
+        <Tab.Item value="products" selected={currentTab === 'products'}>
           적금 상품
         </Tab.Item>
-        <Tab.Item value="results" selected={false}>
+        <Tab.Item value="results" selected={currentTab === 'results'}>
           계산 결과
         </Tab.Item>
       </Tab>
 
-      <ListRow
-        contents={
-          <ListRow.Texts
-            type="3RowTypeA"
-            top={'기본 정기적금'}
-            topProps={{ fontSize: 16, fontWeight: 'bold', color: colors.grey900 }}
-            middle={'연 이자율: 3.2%'}
-            middleProps={{ fontSize: 14, color: colors.blue600, fontWeight: 'medium' }}
-            bottom={'100,000원 ~ 500,000원 | 12개월'}
-            bottomProps={{ fontSize: 13, color: colors.grey600 }}
-          />
-        }
-        right={<Assets.Icon name="icon-check-circle-green" />}
-        onClick={() => {}}
-      />
-      <ListRow
-        contents={
-          <ListRow.Texts
-            type="3RowTypeA"
-            top={'고급 정기적금'}
-            topProps={{ fontSize: 16, fontWeight: 'bold', color: colors.grey900 }}
-            middle={'연 이자율: 2.8%'}
-            middleProps={{ fontSize: 14, color: colors.blue600, fontWeight: 'medium' }}
-            bottom={'50,000원 ~ 1,000,000원 | 24개월'}
-            bottomProps={{ fontSize: 13, color: colors.grey600 }}
-          />
-        }
-        onClick={() => {}}
-      />
+      {/* 적금 상품 목록 */}
+      {filteredProducts.map(product => (
+        <ListRow
+          key={product.id}
+          contents={
+            <ListRow.Texts
+              type="3RowTypeA"
+              top={product.name}
+              topProps={{ fontSize: 16, fontWeight: 'bold', color: colors.grey900 }}
+              middle={`연 이자율: ${product.annualRate}%`}
+              middleProps={{ fontSize: 14, color: colors.blue600, fontWeight: 'medium' }}
+              bottom={`${formatNumber(product.minMonthlyAmount)}원 ~ ${formatNumber(product.maxMonthlyAmount)}원 | ${product.availableTerms}개월`}
+              bottomProps={{ fontSize: 13, color: colors.grey600 }}
+            />
+          }
+          right={selectedProductId === product.id ? <Assets.Icon name="icon-check-circle-green" /> : undefined}
+          onClick={() => handleProductSelect(product.id)}
+        />
+      ))}
 
       {/* 아래는 계산 결과 탭 내용이에요. 계산 결과 탭을 구현할 때 주석을 해제해주세요. */}
       {/* <Spacing size={8} />
