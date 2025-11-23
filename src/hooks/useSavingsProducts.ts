@@ -1,39 +1,33 @@
-import { useEffect, useState } from 'react';
 import { http } from 'tosslib';
 import type { SavingsProduct } from '@/types/savings';
+import { wrapPromise, type SuspenseResource } from '@/utils/suspense';
 
-interface UseSavingsProductsReturn {
-  products: SavingsProduct[];
-  isLoading: boolean;
-  error: string | null;
+// 모듈 레벨에서 리소스 저장 (컴포넌트가 다시 렌더링되어도 유지)
+let resource: SuspenseResource<SavingsProduct[]> | null = null;
+
+/**
+ * 적금 상품 데이터를 불러오는 함수
+ */
+function fetchSavingsProducts(): Promise<SavingsProduct[]> {
+  return http.get<SavingsProduct[]>('/api/savings-products');
 }
 
 /**
- * 적금 상품 데이터를 불러오는 Hook
- * API 호출, 로딩 상태, 에러 상태를 관리합니다.
+ * 적금 상품 데이터를 불러오는 Hook (Suspense 지원)
+ * Promise를 throw하여 Suspense를 트리거하고,
+ * 에러 발생 시 ErrorBoundary가 캐치합니다.
  */
-export function useSavingsProducts(): UseSavingsProductsReturn {
-  const [products, setProducts] = useState<SavingsProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useSavingsProducts(): SavingsProduct[] {
+  if (!resource) {
+    resource = wrapPromise(fetchSavingsProducts());
+  }
+  return resource.read();
+}
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await http.get<SavingsProduct[]>('/api/savings-products');
-        setProducts(response);
-      } catch (e) {
-        setError('상품 목록을 불러오는데 실패했습니다.');
-        console.error('Failed to fetch products:', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  return { products, isLoading, error };
+/**
+ * 리소스를 초기화하는 함수
+ * ErrorBoundary에서 재시도 시 사용됩니다.
+ */
+export function resetSavingsProducts(): void {
+  resource = null;
 }
